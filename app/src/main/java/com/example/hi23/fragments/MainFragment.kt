@@ -38,7 +38,6 @@ import java.util.ArrayList
 const val API_KEY = "9432eca1dec64dbfb1a154703231308"
 
 class MainFragment : Fragment() {
-        private lateinit var fLocClient: FusedLocationProviderClient
     private val fList = listOf(
         HoursFragment.newInstance(),
         DaysFragment.newInstance()
@@ -47,12 +46,14 @@ class MainFragment : Fragment() {
         "Hours",
         "Days"
     )
+    private lateinit var fLocClient: FusedLocationProviderClient
     private lateinit var pLauncher: ActivityResultLauncher<String>
     private lateinit var binding: FragmentMainBinding
     private val model: MViewModel by activityViewModels()
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
         binding = FragmentMainBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -69,14 +70,14 @@ class MainFragment : Fragment() {
         checkLoc()
     }
 
-    private fun init() = with(binding){
+    private fun init() = with(binding) {
         fLocClient = LocationServices.getFusedLocationProviderClient(requireContext())
         ibSync.setOnClickListener {
             tabLayout.selectTab(tabLayout.getTabAt(0))
             checkLoc()
         }
         ibSearch.setOnClickListener {
-            DialogManager.searchNameDialog(requireContext(), object : DialogManager.Listner{
+            DialogManager.searchNameDialog(requireContext(), object : DialogManager.Listner {
                 override fun onClick(name: String?) {
                     name?.let { it1 -> reqWeatherData(it1) }
                 }
@@ -84,16 +85,16 @@ class MainFragment : Fragment() {
         }
         val adapter = VpAdapter(activity as FragmentActivity, fList)
         vp1.adapter = adapter
-        TabLayoutMediator(tabLayout, vp1){
-            tab, pos -> tab.text = tList[pos]
+        TabLayoutMediator(tabLayout, vp1) { tab, pos ->
+            tab.text = tList[pos]
         }.attach()
     }
 
-    private fun checkLoc(){
-        if(isLocEnabled()) {
+    private fun checkLoc() {
+        if (isLocEnabled()) {
             getLocation()
         } else {
-            DialogManager.locSettDialog(requireContext(), object : DialogManager.Listner{
+            DialogManager.locSettDialog(requireContext(), object : DialogManager.Listner {
                 override fun onClick(name: String?) {
                     startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                 }
@@ -101,13 +102,12 @@ class MainFragment : Fragment() {
         }
     }
 
-
-    private fun isLocEnabled(): Boolean{
+    private fun isLocEnabled(): Boolean {
         val lm = activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         return lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
     }
 
-    private fun getLocation(){
+    private fun getLocation() {
         val ct = CancellationTokenSource()
         if (ActivityCompat.checkSelfPermission(
                 requireContext(),
@@ -122,30 +122,31 @@ class MainFragment : Fragment() {
         fLocClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, ct.token)
             .addOnCompleteListener {
                 reqWeatherData("${it.result.latitude}, ${it.result.longitude}")
-        }
+            }
     }
 
-    private fun updateCurrentCard() = with(binding){
-        model.liveDataCurrent.observe(viewLifecycleOwner){
+    private fun updateCurrentCard() = with(binding) {
+        model.liveDataCurrent.observe(viewLifecycleOwner) {
             val maxMinTemp = "${it.maxTemp}'C / ${it.minTemp}'C"
             tvData.text = it.time
             tvCity.text = it.city
             tvCurrentTemp.text = it.currentTemp.ifEmpty { maxMinTemp }
             tvCondition.text = it.condition
-            tvMaxMin.text = if(it.currentTemp.isEmpty()) "" else maxMinTemp
+            tvMaxMin.text = if (it.currentTemp.isEmpty()) "" else maxMinTemp
             Picasso.get().load("https:" + it.imageUrl).into(imWeather)
         }
     }
 
-    private fun permListener(){
+    private fun permListener() {
         pLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()){
+            ActivityResultContracts.RequestPermission()
+        ) {
             Toast.makeText(activity, "hi $it", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun checkPerm(){
-        if(!isPermGrant(Manifest.permission.ACCESS_FINE_LOCATION)){
+    private fun checkPerm() {
+        if (!isPermGrant(Manifest.permission.ACCESS_FINE_LOCATION)) {
             permListener()
             pLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
@@ -160,17 +161,11 @@ class MainFragment : Fragment() {
                 "3" +
                 "&aqi=no&alerts=no\n"
         val queue = Volley.newRequestQueue(context)
-        val request = StringRequest(
-            Request.Method.GET,
-            url,
-            {
-                    result -> parsWeatherData(result)
-            },
-            {
-                    error ->
-                Log.d("MyLog", "Error: $error")
-            }
-        )
+        val request = StringRequest(Request.Method.GET, url, { result ->
+            parsWeatherData(result)
+        }, { error ->
+            Log.d("MyLog", "Error: $error")
+        })
         queue.add(request)
     }
 
@@ -180,11 +175,11 @@ class MainFragment : Fragment() {
         parsCurrentData(mainObject, list[0])
     }
 
-    private fun parseDays(mainObjects: JSONObject): List<WeatherModel>{
+    private fun parseDays(mainObjects: JSONObject): List<WeatherModel> {
         val list = ArrayList<WeatherModel>()
         val daysArray = mainObjects.getJSONObject("forecast").getJSONArray("forecastday")
         val name = mainObjects.getJSONObject("location").getString("name")
-        for (i in 0 until daysArray.length()){
+        for (i in 0 until daysArray.length()) {
             val day = daysArray[i] as JSONObject
             val item = WeatherModel(
                 name,
@@ -195,14 +190,14 @@ class MainFragment : Fragment() {
                 day.getJSONObject("day").getString("mintemp_c").toFloat().toInt().toString(),
                 day.getJSONObject("day").getJSONObject("condition").getString("icon"),
                 day.getJSONArray("hour").toString()
-                )
+            )
             list.add(item)
         }
         model.liveDataList.value = list
         return list
     }
 
-     fun parsCurrentData(mainObject: JSONObject, weatherItem: WeatherModel){
+    fun parsCurrentData(mainObject: JSONObject, weatherItem: WeatherModel) {
         val item = WeatherModel(
             mainObject.getJSONObject("location").getString("name"),
             mainObject.getJSONObject("current").getString("last_updated"),
@@ -213,7 +208,7 @@ class MainFragment : Fragment() {
             mainObject.getJSONObject("current").getJSONObject("condition").getString("icon"),
             weatherItem.hours
         )
-         model.liveDataCurrent.value = item
+        model.liveDataCurrent.value = item
     }
 
     companion object {
